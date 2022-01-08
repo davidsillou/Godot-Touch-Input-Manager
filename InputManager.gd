@@ -17,6 +17,7 @@ enum Gestures {PINCH, MULTI_DRAG, TWIST}
 const debug = false
 const DRAG_STARTUP_TIME = 0.02
 const TAP_TIME_THRESHOLD = 0.2
+const TAP_DISTANCE_THRESHOLD = 25
 
 # Control.
 var last_mouse_press = null  # Last mouse button pressed.
@@ -29,6 +30,7 @@ var only_touch = null # Last touch if there wasn't another touch at the same tim
 var drag_startup_timer = Timer.new()
 var drag_enabled = false 
 
+var tap_position = null
 
 ## Creates the required timers and connects their timeouts.
 func _ready():
@@ -69,7 +71,7 @@ func _unhandled_input(event):
 				var rel1 = event.position - last_mouse_press.position
 				var rel2 = rel1 + event.relative
 				emit("twist", InputEventScreenTwist.new({"position": last_mouse_press.position,
-													     "relative": rel1.angle_to(rel2),
+														 "relative": rel1.angle_to(rel2),
 														 "speed": event.speed}))
 	
 	# Touch.
@@ -80,6 +82,7 @@ func _unhandled_input(event):
 				emit("single_touch", InputEventSingleScreenTouch.new(event))
 				only_touch = event
 				if tap_delay_timer.is_stopped(): tap_delay_timer.start(TAP_TIME_THRESHOLD)
+				tap_position = event.position
 			else:
 				only_touch = null
 				cancel_single_drag()
@@ -91,7 +94,8 @@ func _unhandled_input(event):
 				emit("single_touch", InputEventSingleScreenTouch.new(event))
 				if !tap_delay_timer.is_stopped(): 
 					tap_delay_timer.stop()
-					emit("single_tap", InputEventSingleScreenTap.new(only_touch))
+					if (event.position - tap_position).length() <= TAP_DISTANCE_THRESHOLD:
+						emit("single_tap", InputEventSingleScreenTap.new(only_touch))
 		
 	elif event is InputEventScreenDrag:
 		drags[event.index] = event
